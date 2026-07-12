@@ -1,4 +1,8 @@
-name: Déploiement GitHub Pages
+name: Publication GitHub Pages
+
+# Publie le site sur la branche gh-pages à chaque mise à jour de main.
+# (La création du site Pages via l'API n'est pas permise au jeton du
+# workflow ; la branche gh-pages, elle, est activée automatiquement.)
 
 on:
   push:
@@ -6,31 +10,21 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: "pages"
   cancel-in-progress: false
 
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  publish:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Configuration de Pages
-        uses: actions/configure-pages@v5
+      - name: Publier sur la branche gh-pages
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          enablement: true
-      - name: Envoi du site statique
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: '.'
-      - name: Déploiement
-        id: deployment
-        uses: actions/deploy-pages@v4
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: .
+          exclude_assets: '.github'
