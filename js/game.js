@@ -48,6 +48,21 @@ const SFX = {
     osc.stop(t0 + dur + 0.02);
   },
 
+  warp() {
+    if (this.muted || !this.ctx) return;
+    const t0 = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(200, t0);
+    osc.frequency.exponentialRampToValueAtTime(950, t0 + 0.18);
+    g.gain.setValueAtTime(0.12, t0);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.25);
+    osc.connect(g).connect(this.ctx.destination);
+    osc.start(t0);
+    osc.stop(t0 + 0.3);
+  },
+
   pop()   { this.beep(340, 0.08, 'triangle', 0.15); },
   click() { this.beep(820, 0.04, 'square', 0.05); },
   ding()  { this.beep(1568, 0.5, 'sine', 0.14); this.beep(2349, 0.6, 'sine', 0.08); },
@@ -101,6 +116,7 @@ class Game {
       inertia: def.inertia || 1,
       ring: 0,
     };
+    if (def.init) def.init(el);
     this.elements.push(el);
     return el;
   }
@@ -146,6 +162,7 @@ class Game {
       color: MARBLE_COLORS[(Math.random() * MARBLE_COLORS.length) | 0],
       scored: false,
       held: false,
+      portalCd: 0,
     });
     SFX.pop();
   }
@@ -179,6 +196,8 @@ class Game {
       }
       const h = dt / SUBSTEPS;
       for (let s = 0; s < SUBSTEPS; s++) this.substep(h);
+      this.checkSwitches();
+      this.checkPortals(dt);
       this.checkBells();
       this.checkScoring();
       this.despawn();
@@ -224,6 +243,7 @@ class Game {
                 dbx: d ? d.x : 0, dby: d ? d.y : 0,
                 rest: poly.rest, fric: poly.fric,
                 boost: poly.boost || 0,
+                belt: poly.belt || 0,
                 rotating: !!poly.rotating,
                 el,
               });
@@ -276,13 +296,17 @@ class Game {
         m.x += nx * pen;
         m.y += ny * pen;
 
-        /* vitesse de surface (segments en rotation) */
+        /* vitesse de surface (segments en rotation ou tapis roulants) */
         let svx = 0, svy = 0, dpx = 0, dpy = 0;
         if (seg.rotating) {
           dpx = seg.dax + (seg.dbx - seg.dax) * t;
           dpy = seg.day + (seg.dby - seg.day) * t;
           svx = dpx * seg.el.omega;
           svy = dpy * seg.el.omega;
+        } else if (seg.belt) {
+          const len = Math.sqrt(len2);
+          svx = abx / len * seg.belt;
+          svy = aby / len * seg.belt;
         }
 
         const rvx = m.vx - svx, rvy = m.vy - svy;
@@ -301,8 +325,9 @@ class Game {
           m.vy = nvy;
 
           /* couple transmis à l'élément (approche coordonnée généralisée :
-             tau = -impulsion · dP/dtheta) */
-          if (seg.rotating) {
+             tau = -impulsion · dP/dtheta) ; les éléments motorisés ne
+             sont pas ralentis par les impacts */
+          if (seg.rotating && !DEFS[seg.el.type].motor) {
             const def = DEFS[seg.el.type];
             const tau = -(impX * dpx + impY * dpy);
             seg.el.omega += tau / seg.el.inertia;
@@ -330,6 +355,7 @@ class Game {
           const rest = -vn < 60 ? 0 : c.rest;
           m.vx -= (1 + rest) * vn * nx;
           m.vy -= (1 + rest) * vn * ny;
+          if (-vn > 260) SFX.tick(-vn);
         }
       }
     }
@@ -364,15 +390,64 @@ class Game {
       }
     }
 
-    /* intégration des éléments dynamiques (roue, bascule) */
+    /* intégration des éléments dynamiques (roue, bascule, hélice) */
     for (const el of this.elements) {
       const def = DEFS[el.type];
       if (!def.dynamic) continue;
+      if (def.motor) {
+        el.omega = def.motor;
+        el.theta += el.omega * h;
+        continue;
+      }
       el.theta += el.omega * h;
       el.omega *= def.damping || 0.999;
       if (def.limits) {
         if (el.theta < def.limits[0]) { el.theta = def.limits[0]; el.omega *= -0.2; }
         if (el.theta > def.limits[1]) { el.theta = def.limits[1]; el.omega *= -0.2; }
+      }
+    }
+  }
+
+  checkSwitches() {
+    for (const el of this.elements) {
+      const zone = DEFS[el.type].switchZone;
+      if (!zone) continue;
+      let count = 0;
+      for (const m of this.marbles) {
+        const p = worldToLocal(el, m.x, m.y);
+        if (Math.abs(p.x) < zone.x && p.y > zone.y0 && p.y < zone.y1) count++;
+      }
+      /* la langue change de côté quand la dernière bille est sortie */
+      if (el.swWas > 0 && count === 0) {
+        el.dir = -el.dir;
+        SFX.click();
+      }
+      el.swWas = count;
+    }
+  }
+
+  checkPortals(dt) {
+    const portals = this.elements.filter(e => DEFS[e.type].portal);
+    portals.forEach((p, i) => {
+      p.pairIndex = i >> 1;
+      p.pairActive = (i ^ 1) < portals.length;
+    });
+    for (const m of this.marbles) {
+      if (m.portalCd > 0) m.portalCd -= dt;
+    }
+    for (let i = 0; i + 1 < portals.length; i += 2) {
+      for (const m of this.marbles) {
+        if (m.held || m.portalCd > 0) continue;
+        for (let k = 0; k < 2; k++) {
+          const from = portals[i + k], to = portals[i + 1 - k];
+          if (Math.hypot(m.x - from.x, m.y - from.y) < DEFS.portail.sensorR + m.r) {
+            m.x = to.x;
+            m.y = to.y;
+            m.portalCd = 0.5;      // évite l'aller-retour instantané
+            SFX.warp();
+            break;
+          }
+        }
       }
     }
   }

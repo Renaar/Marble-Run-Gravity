@@ -35,7 +35,7 @@ function setupUI(game) {
     cctx.translate(42, 30);
     const sc = def.preview || 0.45;
     cctx.scale(sc, sc);
-    def.draw(cctx, { theta: 0.35, ring: 0, flip: false });
+    def.draw(cctx, { theta: 0.35, ring: 0, flip: false, dir: 1, pairIndex: 0, pairActive: true });
 
     const label = document.createElement('span');
     label.textContent = def.label;
@@ -81,10 +81,29 @@ function setupUI(game) {
 
   /* ---------------- souris sur le plateau ---------------- */
 
+  /* double-tap tactile = lâcher une bille (l'événement dblclick est
+     peu fiable sur iOS) */
+  const lastTap = { t: 0, x: 0, y: 0 };
+  let lastTouchSpawn = 0;
+
   canvas.addEventListener('pointerdown', (e) => {
     SFX.ensure();
     if (drag.mode) return;
     const p = pointerWorld(e);
+
+    if (e.pointerType === 'touch') {
+      const now = performance.now();
+      if (now - lastTap.t < 350 && Math.hypot(p.x - lastTap.x, p.y - lastTap.y) < 40 &&
+          !game.hitTestElement(p.x, p.y) && !game.hitTestMarble(p.x, p.y)) {
+        game.spawnMarble(p.x, p.y);
+        lastTouchSpawn = now;
+        lastTap.t = 0;
+        return;
+      }
+      lastTap.t = now;
+      lastTap.x = p.x;
+      lastTap.y = p.y;
+    }
 
     const marble = game.hitTestMarble(p.x, p.y);
     if (marble) {
@@ -147,6 +166,7 @@ function setupUI(game) {
   });
 
   canvas.addEventListener('dblclick', (e) => {
+    if (performance.now() - lastTouchSpawn < 600) return;   // déjà géré en tactile
     const p = pointerWorld(e);
     if (!game.hitTestElement(p.x, p.y)) {
       game.spawnMarble(p.x, p.y);

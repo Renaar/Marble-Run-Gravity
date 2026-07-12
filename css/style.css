@@ -17,6 +17,9 @@ html, body {
   background: var(--bg);
   color: var(--ink);
   overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 body {
@@ -58,6 +61,12 @@ body {
   text-transform: uppercase;
   letter-spacing: 2px;
 }
+
+.btn, .toggle, #selpanel button, .card {
+  touch-action: manipulation;
+}
+
+.card { touch-action: none; }   /* le glisser-déposer doit garder le doigt */
 
 .btn {
   border: 1px solid #d8d4cd;
@@ -213,9 +222,9 @@ main {
   border: none;
   background: #f4f2ee;
   border-radius: 7px;
-  width: 32px;
-  height: 30px;
-  font-size: 15px;
+  width: 40px;
+  height: 38px;
+  font-size: 17px;
   cursor: pointer;
 }
 
