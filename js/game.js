@@ -15,7 +15,9 @@ const MAX_SPEED = 1500;        // vitesse max d'une bille
 const SUBSTEPS = 4;            // sous-pas physiques par image
 const RAIL_HALF_THICK = 3;     // demi-épaisseur des rails pour la collision
 const MAX_MARBLES = 80;
-const MARBLE_COLORS = ['#2f6fd6', '#2f6fd6', '#3b82f6', '#1d4ed8', '#38bdf8'];
+const TRAIL_MAX_POINTS = 600;   // par bille
+const TRAIL_MAX_DEAD = 40;      // traces conservées après disparition
+const HUE_STEP = 137.508;       // angle d'or : couleurs successives bien distinctes
 
 /* ------------------------------------------------------------------ */
 /* Sons (WebAudio, généré à la volée : aucun fichier nécessaire)      */
@@ -93,6 +95,9 @@ class Game {
     this.autoTimer = 0;
     this.score = 0;
     this.nextId = 1;
+    this.marbleSeq = 0;       // numéro de bille, pour la couleur
+    this.showTrails = false;
+    this.deadTrails = [];     // traces des billes disparues
     this.onScore = null;      // callback UI
     this.onEdit = null;       // callback sauvegarde auto
 
@@ -155,16 +160,28 @@ class Game {
   /* ---------------- billes ---------------- */
 
   spawnMarble(x, y, vx = 0, vy = 0) {
-    if (this.marbles.length >= MAX_MARBLES) this.marbles.shift();
+    if (this.marbles.length >= MAX_MARBLES) this.retireMarble(this.marbles.shift());
+    const hue = Math.round((this.marbleSeq++ * HUE_STEP) % 360);
     this.marbles.push({
       x, y, vx, vy,
       r: MARBLE_R,
-      color: MARBLE_COLORS[(Math.random() * MARBLE_COLORS.length) | 0],
+      color: `hsl(${hue}, 72%, 50%)`,
+      colorDark: `hsl(${hue}, 80%, 28%)`,
+      colorLight: `hsl(${hue}, 65%, 88%)`,
       scored: false,
       held: false,
       portalCd: 0,
+      trail: [],
     });
     SFX.pop();
+  }
+
+  /* conserve la trace d'une bille qui quitte le plateau */
+  retireMarble(m) {
+    if (m && m.trail.length > 1) {
+      this.deadTrails.push({ color: m.color, pts: m.trail });
+      if (this.deadTrails.length > TRAIL_MAX_DEAD) this.deadTrails.shift();
+    }
   }
 
   dropFromLaunchers() {
@@ -180,7 +197,18 @@ class Game {
   }
 
   clearMarbles() {
+    for (const m of this.marbles) {
+      if (!m.held) this.retireMarble(m);
+    }
     this.marbles = this.marbles.filter(m => m.held);
+  }
+
+  clearTrails() {
+    this.deadTrails = [];
+    for (const m of this.marbles) {
+      m.trail = [];
+      m.lastTrailX = undefined;
+    }
   }
 
   /* ---------------- physique ---------------- */
@@ -200,6 +228,7 @@ class Game {
       this.checkPortals(dt);
       this.checkBells();
       this.checkScoring();
+      this.recordTrails();
       this.despawn();
     }
     /* effets visuels */
@@ -444,6 +473,8 @@ class Game {
             m.x = to.x;
             m.y = to.y;
             m.portalCd = 0.5;      // évite l'aller-retour instantané
+            m.trail.push(null);    // coupe la trace pendant la téléportation
+            m.lastTrailX = undefined;
             SFX.warp();
             break;
           }
@@ -490,9 +521,30 @@ class Game {
     }
   }
 
+  recordTrails() {
+    /* on mémorise toujours la trajectoire : activer l'affichage plus
+       tard montre aussi le passé récent */
+    for (const m of this.marbles) {
+      if (m.lastTrailX === undefined ||
+          Math.hypot(m.x - m.lastTrailX, m.y - m.lastTrailY) > 7) {
+        m.trail.push([m.x, m.y]);
+        m.lastTrailX = m.x;
+        m.lastTrailY = m.y;
+        if (m.trail.length > TRAIL_MAX_POINTS) m.trail.shift();
+      }
+    }
+  }
+
   despawn() {
-    this.marbles = this.marbles.filter(m =>
-      m.held || (m.y < WORLD_H + 80 && m.x > -80 && m.x < WORLD_W + 80));
+    const keep = [];
+    for (const m of this.marbles) {
+      if (m.held || (m.y < WORLD_H + 80 && m.x > -80 && m.x < WORLD_W + 80)) {
+        keep.push(m);
+      } else {
+        this.retireMarble(m);
+      }
+    }
+    this.marbles = keep;
   }
 
   /* ---------------- vue / rendu ---------------- */
@@ -569,6 +621,18 @@ class Game {
       }
     }
 
+    /* traces des trajectoires */
+    if (this.showTrails) {
+      ctx.save();
+      ctx.lineWidth = 2.5;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.globalAlpha = 0.5;
+      for (const tr of this.deadTrails) strokeTrail(ctx, tr.pts, tr.color);
+      for (const m of this.marbles) strokeTrail(ctx, m.trail, m.color);
+      ctx.restore();
+    }
+
     /* billes */
     for (const m of this.marbles) {
       ctx.beginPath();
@@ -576,9 +640,9 @@ class Game {
       ctx.fillStyle = 'rgba(0,0,0,0.10)';
       ctx.fill();
       const g = ctx.createRadialGradient(m.x - 3, m.y - 3, 1, m.x, m.y, m.r);
-      g.addColorStop(0, '#dbeafe');
+      g.addColorStop(0, m.colorLight);
       g.addColorStop(0.35, m.color);
-      g.addColorStop(1, '#123a7a');
+      g.addColorStop(1, m.colorDark);
       ctx.beginPath();
       ctx.arc(m.x, m.y, m.r, 0, TAU);
       ctx.fillStyle = g;
@@ -634,6 +698,21 @@ class Game {
     }
     return null;
   }
+}
+
+/* trace une trajectoire ; les entrées null coupent le trait
+   (téléportation par portail) */
+function strokeTrail(ctx, pts, color) {
+  if (pts.length < 2) return;
+  ctx.strokeStyle = color;
+  ctx.beginPath();
+  let pen = false;
+  for (const p of pts) {
+    if (!p) { pen = false; continue; }
+    if (pen) ctx.lineTo(p[0], p[1]);
+    else { ctx.moveTo(p[0], p[1]); pen = true; }
+  }
+  ctx.stroke();
 }
 
 function distToSegment(px, py, ax, ay, bx, by) {

@@ -270,6 +270,14 @@ function setupUI(game) {
     game.clearMarbles();
   });
 
+  document.getElementById('chkTrails').addEventListener('change', (e) => {
+    game.showTrails = e.target.checked;
+  });
+
+  document.getElementById('btnClearTrails').addEventListener('click', () => {
+    game.clearTrails();
+  });
+
   document.getElementById('btnDemo').addEventListener('click', () => {
     game.load(DEMO_COURSE);
     game.score = 0;

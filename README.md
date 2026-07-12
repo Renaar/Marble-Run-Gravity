@@ -51,6 +51,9 @@ npx serve .
 - **Double-clic** sur le plateau : lâcher une bille à cet endroit
 - **Attraper une bille** à la souris pour la déplacer ou la lancer
 - **Espace** : pause / reprise de la physique
+- **Traces** : chaque bille a sa propre couleur ; cochez « Traces » pour
+  afficher la trajectoire parcourue par chacune (dans sa couleur), et
+  « Effacer les traces » pour repartir de zéro
 
 Sur **écran tactile** (iPad, mobile) : glissez les éléments au doigt, touchez
 un élément pour afficher les boutons pivoter / miroir / supprimer, et
