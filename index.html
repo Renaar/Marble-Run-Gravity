@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Marble Run — Parcours de billes</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header id="topbar">
+  <div id="brand"><span class="brandbox">MARBLE&nbsp;RUN</span><span class="brandsub">parcours de billes</span></div>
+  <button id="btnPlay" class="btn primary" title="Mettre en pause / reprendre la physique">⏸ Pause</button>
+  <button id="btnDrop" class="btn accent" title="Lâcher une bille depuis chaque lanceur">● Lâcher une bille</button>
+  <label class="toggle" title="Lâche une bille automatiquement toutes les 2 secondes">
+    <input type="checkbox" id="chkAuto"> Distributeur auto
+  </label>
+  <button id="btnClearMarbles" class="btn" title="Retirer toutes les billes du plateau">Retirer les billes</button>
+  <span class="sep"></span>
+  <button id="btnDemo" class="btn" title="Recharger le parcours de démonstration">Parcours démo</button>
+  <button id="btnClearAll" class="btn danger" title="Vider entièrement le plateau">Tout effacer</button>
+  <button id="btnMute" class="btn" title="Activer / couper le son">🔊</button>
+  <div id="score" title="Billes arrivées dans le panier">🏆 <b id="scoreVal">0</b> au panier</div>
+</header>
+
+<main>
+  <aside id="palette">
+    <h2>Éléments</h2>
+    <div id="cards"></div>
+  </aside>
+
+  <div id="boardwrap">
+    <canvas id="board"></canvas>
+    <div id="selpanel" hidden>
+      <button data-act="rotl" title="Pivoter à gauche (Maj+R)">⟲</button>
+      <button data-act="rotr" title="Pivoter à droite (R)">⟳</button>
+      <button data-act="flip" title="Miroir (F)">⇆</button>
+      <button data-act="del"  title="Supprimer (Suppr)">✕</button>
+    </div>
+  </div>
+</main>
+
+<footer id="help">
+  Glissez un élément depuis la palette · Molette ou <b>R</b> : rotation · <b>F</b> : miroir ·
+  <b>Suppr</b> : supprimer · Flèches : déplacer · Double-clic sur le plateau : lâcher une bille ·
+  Vous pouvez attraper les billes à la souris !
+</footer>
+
+<script src="js/elements.js"></script>
+<script src="js/game.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
