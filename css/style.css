@@ -1,0 +1,242 @@
+:root {
+  --orange: #d3752b;
+  --orange-dark: #a8571a;
+  --yellow: #ffcc00;
+  --ink: #26221f;
+  --grey: #8d939c;
+  --bg: #f2f0ec;
+  --card: #ffffff;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  overflow: hidden;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- Barre du haut ---------- */
+#topbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: #ffffff;
+  border-bottom: 3px solid var(--yellow);
+  flex-wrap: wrap;
+}
+
+#brand {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-right: 10px;
+  user-select: none;
+}
+
+.brandbox {
+  background: var(--yellow);
+  padding: 3px 8px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  font-size: 17px;
+  border: 2px solid var(--ink);
+}
+
+.brandsub {
+  color: var(--grey);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.btn {
+  border: 1px solid #d8d4cd;
+  background: #faf9f7;
+  color: var(--ink);
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .12s, transform .05s;
+}
+
+.btn:hover { background: #efece6; }
+.btn:active { transform: translateY(1px); }
+
+.btn.primary {
+  background: var(--ink);
+  color: #fff;
+  border-color: var(--ink);
+}
+.btn.primary:hover { background: #443e38; }
+
+.btn.accent {
+  background: var(--orange);
+  border-color: var(--orange-dark);
+  color: #fff;
+}
+.btn.accent:hover { background: #c2681f; }
+
+.btn.danger { color: #b23b2e; }
+.btn.danger:hover { background: #f7e5e2; }
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.sep { flex: 1; }
+
+#score {
+  font-size: 14px;
+  background: #fff7dc;
+  border: 1px solid #efd98a;
+  border-radius: 8px;
+  padding: 6px 12px;
+  white-space: nowrap;
+}
+
+/* ---------- Zone principale ---------- */
+main {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+#palette {
+  width: 208px;
+  background: #ffffff;
+  border-right: 1px solid #e2ded7;
+  overflow-y: auto;
+  padding: 10px;
+  flex-shrink: 0;
+}
+
+#palette h2 {
+  margin: 2px 4px 10px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--grey);
+}
+
+#cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid #e2ded7;
+  border-radius: 10px;
+  padding: 6px 4px 5px;
+  text-align: center;
+  cursor: grab;
+  user-select: none;
+  transition: border-color .12s, box-shadow .12s, transform .08s;
+}
+
+.card:hover {
+  border-color: var(--orange);
+  box-shadow: 0 2px 8px rgba(211, 117, 43, .18);
+  transform: translateY(-1px);
+}
+
+.card canvas {
+  display: block;
+  margin: 0 auto;
+  pointer-events: none;
+}
+
+.card span {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  margin-top: 2px;
+  color: var(--ink);
+}
+
+/* ---------- Plateau ---------- */
+#boardwrap {
+  flex: 1;
+  position: relative;
+  min-width: 0;
+  background: #e9e6e0;
+}
+
+#board {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  display: block;
+}
+
+#board.grabbing { cursor: grabbing; }
+
+/* Panneau flottant de sélection */
+#selpanel {
+  position: absolute;
+  display: flex;
+  gap: 4px;
+  background: #ffffff;
+  border: 1px solid #d8d4cd;
+  border-radius: 10px;
+  padding: 4px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .18);
+  transform: translate(-50%, -100%);
+  z-index: 5;
+}
+
+#selpanel[hidden] { display: none; }
+
+#selpanel button {
+  border: none;
+  background: #f4f2ee;
+  border-radius: 7px;
+  width: 32px;
+  height: 30px;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+#selpanel button:hover { background: var(--yellow); }
+#selpanel button[data-act="del"]:hover { background: #f3c1ba; }
+
+/* ---------- Aide ---------- */
+#help {
+  padding: 6px 14px;
+  font-size: 12px;
+  color: var(--grey);
+  background: #ffffff;
+  border-top: 1px solid #e2ded7;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#help b { color: var(--ink); }
+
+@media (max-width: 900px) {
+  #palette { width: 120px; }
+  #cards { grid-template-columns: 1fr; }
+}
