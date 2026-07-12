@@ -9,9 +9,9 @@ const SAVE_KEY = 'marblerun.course.v1';
 
 /* Parcours de démonstration : lanceur -> rail -> escalier (avec cloche)
    -> virage -> rail -> entonnoir -> panier, plus quelques éléments
-   à découvrir sur le côté. */
+   à découvrir sur le côté (double-cliquez pour lâcher des billes dessus !). */
 const DEMO_COURSE = [
-  ['lanceur',   172,  70, 0, 0],
+  ['lanceur',   196,  70, 0, 0],
   ['cloche',    448, 198, 0, 0],
   ['rail-long', 285, 172, 0.13, 0],
   ['escalier',  480, 292, 0, 0],
@@ -20,9 +20,16 @@ const DEMO_COURSE = [
   ['entonnoir', 1020, 585, 0, 0],
   ['panier',    1020, 700, 0, 0],
   ['demilune',  262, 490, 0, 0],
+  ['aiguillage', 430, 478, 0, 0],
   ['roue',      430, 570, 0, 0],
+  ['tige',      330, 640, 0, 0],
+  ['tige',      300, 600, 0, 0],
   ['bascule',   640, 650, 0, 0],
+  ['convoyeur', 600, 718, 0, 0],
+  ['helice',    905, 315, 0, 0],
   ['bumper',    850, 690, -0.08, 0],
+  ['portail',   745, 730, 0, 0],
+  ['portail',   240, 105, 0, 0],
 ];
 
 (function main() {

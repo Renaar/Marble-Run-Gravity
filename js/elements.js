@@ -410,6 +410,221 @@ const DEFS = {
     },
   },
 
+  /* ------------------------------------------------ Convoyeur ------ */
+  convoyeur: {
+    label: 'Convoyeur',
+    selR: 92,
+    preview: 0.42,
+    polylines() {
+      /* le tapis supérieur entraîne les billes (vitesse de surface) */
+      return [
+        { pts: [{ x: -80, y: -8 }, { x: 80, y: -8 }], rest: 0, fric: 0.12, belt: 140 },
+        { pts: [{ x: -80, y: 8 }, { x: 80, y: 8 }], rest: 0.1, fric: 0.01 },
+      ];
+    },
+    circles() {
+      return [{ x: -80, y: 0, r: 8, rest: 0.1 }, { x: 80, y: 0, r: 8, rest: 0.1 }];
+    },
+    draw(ctx) {
+      const t = performance.now() / 1000;
+      strokePolyline(ctx, [{ x: -80, y: -8 }, { x: 80, y: -8 }], COL.rail, 3);
+      strokePolyline(ctx, [{ x: -80, y: 8 }, { x: 80, y: 8 }], COL.rail, 3);
+      /* rouleaux */
+      for (const rx of [-80, -40, 0, 40, 80]) {
+        ctx.beginPath();
+        ctx.arc(rx, 0, rx === -80 || rx === 80 ? 8 : 5, 0, TAU);
+        ctx.fillStyle = COL.mount;
+        ctx.fill();
+        ctx.strokeStyle = COL.mountEdge;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+      /* tapis en mouvement */
+      ctx.save();
+      ctx.strokeStyle = COL.orange;
+      ctx.lineWidth = 3;
+      ctx.setLineDash([9, 9]);
+      ctx.lineDashOffset = -((t * 140) % 18);
+      ctx.beginPath();
+      ctx.moveTo(-80, -8); ctx.lineTo(80, -8);
+      ctx.stroke();
+      ctx.restore();
+      /* sens de défilement */
+      ctx.fillStyle = COL.orange;
+      ctx.beginPath();
+      ctx.moveTo(4, -20); ctx.lineTo(14, -15); ctx.lineTo(4, -10);
+      ctx.closePath();
+      ctx.fill();
+    },
+  },
+
+  /* ------------------------------------------------ Booster -------- */
+  accelerateur: {
+    label: 'Booster',
+    selR: 60,
+    preview: 0.62,
+    polylines() {
+      /* tapis très rapide : propulse les billes dans son sens */
+      return [{ pts: [{ x: -50, y: 0 }, { x: 50, y: 0 }], rest: 0, fric: 0.2, belt: 520 }];
+    },
+    draw(ctx) {
+      const t = performance.now() / 1000;
+      drawRailWithMounts(ctx, [{ x: -50, y: 0 }, { x: 50, y: 0 }]);
+      /* chevrons défilants */
+      ctx.strokeStyle = COL.orange;
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      const off = (t * 180) % 30;
+      for (let x = -58 + off; x < 42; x += 30) {
+        ctx.beginPath();
+        ctx.moveTo(x, -13); ctx.lineTo(x + 9, -7); ctx.lineTo(x, -1);
+        ctx.stroke();
+      }
+    },
+  },
+
+  /* ------------------------------------------------ Tige ----------- */
+  tige: {
+    label: 'Tige',
+    selR: 22,
+    preview: 1.15,
+    circles() {
+      return [{ x: 0, y: 0, r: 7, rest: 0.75 }];
+    },
+    draw(ctx) {
+      drawMount(ctx, 0, 0, 9);
+      ctx.beginPath();
+      ctx.arc(0, 0, 5.5, 0, TAU);
+      ctx.fillStyle = COL.rail;
+      ctx.fill();
+    },
+  },
+
+  /* ------------------------------------------------ Aiguillage ----- */
+  aiguillage: {
+    label: 'Aiguillage',
+    selR: 58,
+    preview: 0.55,
+    init(el) {
+      el.dir = 1;       // 1 : envoie à droite, -1 : à gauche
+      el.swWas = 0;
+    },
+    /* zone de bascule : quand elle se vide, la langue change de côté */
+    switchZone: { x: 32, y0: -24, y1: 28 },
+    polylines(el) {
+      const d = el.dir || 1;
+      return [
+        { pts: [{ x: -38, y: -52 }, { x: -14, y: -22 }], rest: 0.1, fric: 0.002 },
+        { pts: [{ x: 38, y: -52 }, { x: 14, y: -22 }], rest: 0.1, fric: 0.002 },
+        { pts: [{ x: -26, y: -8 * d }, { x: 26, y: 8 * d }], rest: 0.05, fric: 0.002 },
+      ];
+    },
+    draw(ctx, el) {
+      const d = el.dir || 1;
+      /* guides d'entrée */
+      drawMount(ctx, -38, -52);
+      drawMount(ctx, 38, -52);
+      strokePolyline(ctx, [{ x: -38, y: -52 }, { x: -14, y: -22 }], COL.orange, 5);
+      strokePolyline(ctx, [{ x: 38, y: -52 }, { x: 14, y: -22 }], COL.orange, 5);
+      /* pied et pivot */
+      ctx.beginPath();
+      ctx.moveTo(0, 2); ctx.lineTo(-10, 20); ctx.lineTo(10, 20);
+      ctx.closePath();
+      ctx.fillStyle = COL.mount;
+      ctx.fill();
+      ctx.strokeStyle = COL.mountEdge;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      /* langue orientable */
+      strokePolyline(ctx, [{ x: -26, y: -8 * d }, { x: 26, y: 8 * d }], COL.rail, 6);
+      ctx.beginPath();
+      ctx.arc(0, 0, 4, 0, TAU);
+      ctx.fillStyle = COL.mountEdge;
+      ctx.fill();
+      /* flèche indiquant la sortie */
+      ctx.fillStyle = COL.orange;
+      ctx.beginPath();
+      const ax = 30 * d;
+      ctx.moveTo(ax, 8 * d * (d > 0 ? 1 : -1) + 2);
+      ctx.lineTo(ax + 8 * d, 16);
+      ctx.lineTo(ax - 4 * d, 16);
+      ctx.closePath();
+      ctx.fill();
+    },
+  },
+
+  /* ------------------------------------------------ Hélice --------- */
+  helice: {
+    label: 'Hélice',
+    selR: 52,
+    preview: 0.62,
+    dynamic: true,
+    motor: 2.4,          // rotation constante entraînée par un "moteur"
+    inertia: 1,
+    polylines() {
+      return [
+        { pts: [{ x: -44, y: 0 }, { x: 44, y: 0 }], rotating: true, rest: 0.35, fric: 0.005 },
+        { pts: [{ x: 0, y: -44 }, { x: 0, y: 44 }], rotating: true, rest: 0.35, fric: 0.005 },
+      ];
+    },
+    circles() {
+      return [{ x: 0, y: 0, r: 9, rest: 0.2 }];
+    },
+    draw(ctx, el) {
+      ctx.save();
+      ctx.rotate(el.theta);
+      strokePolyline(ctx, [{ x: -44, y: 0 }, { x: 44, y: 0 }], COL.orange, 6);
+      strokePolyline(ctx, [{ x: 0, y: -44 }, { x: 0, y: 44 }], COL.orange, 6);
+      strokePolyline(ctx, [{ x: -40, y: 0 }, { x: 40, y: 0 }], COL.orangeHi, 2);
+      strokePolyline(ctx, [{ x: 0, y: -40 }, { x: 0, y: 40 }], COL.orangeHi, 2);
+      ctx.restore();
+      ctx.beginPath();
+      ctx.arc(0, 0, 9, 0, TAU);
+      ctx.fillStyle = COL.mount;
+      ctx.fill();
+      ctx.strokeStyle = COL.mountEdge;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    },
+  },
+
+  /* ------------------------------------------------ Portail -------- */
+  portail: {
+    label: 'Portail',
+    selR: 30,
+    preview: 0.95,
+    portal: true,
+    sensorR: 15,
+    draw(ctx, el) {
+      const palettes = [
+        ['#7c3aed', 'rgba(167,139,250,0.30)'],
+        ['#0ea5e9', 'rgba(125,211,252,0.30)'],
+        ['#e11d48', 'rgba(253,164,175,0.30)'],
+      ];
+      const active = el.pairActive !== false;
+      const pal = palettes[(el.pairIndex || 0) % palettes.length];
+      const t = performance.now() / 1000;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(0, 0, 11, 0, TAU);
+      ctx.fillStyle = active ? pal[1] : 'rgba(185,189,196,0.25)';
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(0, 0, 16, 0, TAU);
+      ctx.strokeStyle = active ? pal[0] : COL.mount;
+      ctx.lineWidth = 4.5;
+      ctx.setLineDash([9, 6]);
+      ctx.lineDashOffset = -t * 26;
+      ctx.stroke();
+      ctx.restore();
+      ctx.beginPath();
+      ctx.arc(0, 0, 2.5, 0, TAU);
+      ctx.fillStyle = active ? pal[0] : COL.mountEdge;
+      ctx.fill();
+    },
+  },
+
   /* ------------------------------------------------ Panier --------- */
   panier: {
     label: 'Panier',
@@ -442,7 +657,8 @@ const DEFS = {
 /* Ordre d'affichage dans la palette */
 const PALETTE_ORDER = [
   'lanceur', 'rail', 'rail-long', 'virage', 'demilune', 'escalier',
-  'entonnoir', 'roue', 'bascule', 'bumper', 'cloche', 'panier',
+  'entonnoir', 'aiguillage', 'convoyeur', 'accelerateur', 'roue', 'helice',
+  'bascule', 'bumper', 'tige', 'portail', 'cloche', 'panier',
 ];
 
 /* ---------- transformations locales <-> monde ---------- */
